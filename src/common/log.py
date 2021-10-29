@@ -12,7 +12,7 @@ class Logger(object):
         self.__log_format = logging.Formatter(DEFINE_LOG_FORMAT)
 
     def get_logger(self):
-        file_handler = handlers.TimedRotatingFileHandler(filename='./tnn.log', when='MIDNIGHT', backupCount=30, encoding='utf-8')
+        file_handler = handlers.TimedRotatingFileHandler(filename='../../logs/tnn.log', when='MIDNIGHT', backupCount=30, encoding='utf-8')
         file_handler.setFormatter(self.__log_format)
         self.__logger.addHandler(file_handler)
         return self.__logger

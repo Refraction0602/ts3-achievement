@@ -66,8 +66,9 @@ class SteamInterface:
         """
         players = results['players']
         for player in players:
-            # logger.info(player)
             if player['account_id'] == account_id_32bit:
+                if 'hero_damage' not in player:
+                    continue
                 record_info = {'match_id': results['match_id'],
                                'account_id_32bit': account_id_32bit,
                                'account_id_64bit': account_id_64bit,

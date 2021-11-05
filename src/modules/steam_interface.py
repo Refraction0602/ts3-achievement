@@ -66,6 +66,8 @@ class SteamInterface:
         """
         players = results['players']
         for player in players:
+            if 'account_id' not in player:
+                continue
             if player['account_id'] == account_id_32bit:
                 if 'hero_damage' not in player:
                     continue
@@ -95,9 +97,16 @@ class SteamInterface:
     def hours_to_update(self):
         client_list = self.mongo.read(DEFINE_MONGO_CLIENT_INFO, {'cldbid': {'$ne': 1}})
         for client in client_list:
+            logger.info("client: %s" % client)
             account_id_32bit = client['account_id_32bit']
             account_id_64bit = client['account_id_64bit']
             match_list = self.get_match(account_id_64bit)
-            for match_id in match_list:
-                match_details = self.get_match_details(match_id)
-                self.update_to_mongodb(match_details, account_id_32bit, account_id_64bit)
+            if match_list:
+                for match_id in match_list:
+                    match_details = self.get_match_details(match_id)
+                    self.update_to_mongodb(match_details, account_id_32bit, account_id_64bit)
+
+
+def steam_interface_hours_to_update():
+    si = SteamInterface()
+    si.hours_to_update()

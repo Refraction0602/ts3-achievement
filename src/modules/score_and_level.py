@@ -12,7 +12,6 @@ class ScoreAndLevel:
     def __init__(self):
         self.mongo = db_handler_get('default')
         self.__init_static_level()
-        self.telnet_client = TelnetClient(password=conf_get('ts3_server')['query_password'])
 
     def __init_static_level(self):
         table_content = self.mongo.read(DEFINE_MONGO_STATIC_LEVEL, {})
@@ -76,7 +75,14 @@ class ScoreAndLevel:
                         ready_to_set.append(single)
                     self.mongo.write(DEFINE_MONGO_CLIENT_INFO, {'account_id_64bit': account_id_64bit}, {}, update)
             if ready_to_set:
-                self.telnet_client.set_channel_group(ready_to_set)
+                query_password = conf_get('ts3_server')['query_password']
+                tc = TelnetClient(password=query_password)
+                tc.set_channel_group(ready_to_set)
 
     def hours_to_update(self):
         self.__experience()
+
+
+def score_and_level_hours_to_update():
+    sal = ScoreAndLevel()
+    sal.hours_to_update()

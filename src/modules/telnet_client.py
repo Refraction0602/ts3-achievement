@@ -2,6 +2,7 @@ import telnetlib
 import time
 import traceback
 
+from src.common.yaml_reader import conf_get
 from src.common.constant import DEFINE_MONGO_SERVER_GROUP, DEFINE_MONGO_CLIENT_INFO
 from src.common.mongodb import db_handler_get
 from src.common.log import logger
@@ -37,17 +38,12 @@ class TelnetClient:
             logger.warning('connect failed: %s' % traceback.format_exc())
 
         connect_result = self.tn.read_very_eager().decode('utf8').replace('\n\r', '')
-        # logger.info('connect result: %s %s' % (type(connect_result), connect_result))
         if 'TS3Welcome' in connect_result:
             # logger.info('login %s %s\n' % (self.username, self.password))
             self.tn.write(('login %s %s\n' % (self.username, self.password)).encode())
             time.sleep(0.1)
             login_result = self.tn.read_very_eager().decode('utf8').replace('\n\r', '')
-            # logger.info("login result: %s" % login_result)
             if 'msg=ok' in login_result:
-                server_id = self.__get_server_id()
-                self.__execute_command('use %s' % server_id)
-                # logger.info('login result: %s %s' % (type(login_result), login_result))
                 return True
         return False
 
@@ -101,6 +97,8 @@ class TelnetClient:
                 #     self.channel_list[channel_name] = cid
 
                 # update server_group
+                server_id = self.__get_server_id()
+                self.__execute_command('use %s' % server_id)
                 command_result = self.__execute_command('servergrouplist')
                 server_group_list = command_result.split('|')
                 for server_group in server_group_list:
@@ -109,8 +107,11 @@ class TelnetClient:
                     name = self.__get_value(group[1])
                     sg = {'sgid': int(sgid), 'name': name}
                     self.server_group_list.append(sg)
-
+            self.tn.close()
+            if self.__login_host():
                 # update client
+                server_id = self.__get_server_id()
+                self.__execute_command('use %s' % server_id)
                 command_result = self.__execute_command('clientlist')
                 client_list = command_result.split('|')
                 for client in client_list:
@@ -145,6 +146,7 @@ class TelnetClient:
                               'update_time': first_time}
                     update = {'name': server_group['name'], 'update_time': first_time}
                     self.mongo.write(DEFINE_MONGO_SERVER_GROUP, cond, insert, update)
+            if self.client_info:
                 for client in self.client_info:
                     cond = {'cldbid': client['cldbid']}
                     insert = client
@@ -189,18 +191,26 @@ class TelnetClient:
         """
         # logger.info("ready_to_set: %s" % ready_to_set)
         if self.__login_host():
+            server_id = self.__get_server_id()
+            self.__execute_command('use %s' % server_id)
             for data in ready_to_set:
                 name = 'lv%s' % data['level']
                 account_id_32bit = data['account_id_32bit']
                 account_id_64bit = data['account_id_64bit']
                 sgid = self.mongo.read(DEFINE_MONGO_SERVER_GROUP, {'name': name})[0]['sgid']
                 cldbid = self.mongo.read(DEFINE_MONGO_CLIENT_INFO, {'account_id_64bit': account_id_64bit})[0]['cldbid']
+                if data['level'] > 1:
+                    old_name = 'lv%s' % (data['level'] - 1)
+                    old_sgid = self.mongo.read(DEFINE_MONGO_SERVER_GROUP, {'name': old_name})[0]['sgid']
+                    command = 'servergroupdelclient sgid=%s cldbid=%s' % (old_sgid, cldbid)
+                    logger.info("%s" % command)
+                    self.__execute_command(command)
                 command = 'servergroupaddclient sgid=%s cldbid=%s' % (sgid, cldbid)
-                # logger.info("commond: %s" % command)
-                result = self.__execute_command(command)
-                # logger.info("exe_result: %s" % result)
+                logger.info("%s" % command)
+                self.__execute_command(command)
                 now_experience, to_the_next_level = data['now_experience'], data['to_the_next_level']
                 new_description = '(steam32:%s;steam64:%s)经验：%s/%s' % (account_id_32bit, account_id_64bit, now_experience, to_the_next_level)
+                logger.info("%s %s" % (cldbid, new_description))
                 self.set_client_description(cldbid, new_description)
         self.tn.close()
 
@@ -241,3 +251,9 @@ class TelnetClient:
 
     def main(self):
         logger.info('server_group_list: %s' % self.server_group_list)
+
+
+def telnet_client_hours_to_update():
+    query_password = conf_get('ts3_server')['query_password']
+    tc = TelnetClient(password=query_password)
+    tc.hours_to_update()

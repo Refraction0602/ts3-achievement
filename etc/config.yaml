@@ -1,0 +1,5 @@
+global:
+  steam:
+    api_key: "your steam api key"
+  ts3_server:
+    query_password: "7Kro0UlR"

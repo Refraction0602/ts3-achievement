@@ -40,7 +40,7 @@ class ScoreAndLevel:
 
     def __experience(self):
         """
-        experience = base_score(10) + kill_score(kills * 1) + assists_score(assists * 1) + damage_score(int(damage / 1000))
+        experience = base_score(100) + kill_score(kills * 2) + assists_score(assists * 2) + damage_score(int(damage / 500))
         :return:
         """
         client_list = self.mongo.read(DEFINE_MONGO_CLIENT_INFO, {'cldbid': {'$ne': 1}, 'account_id_64bit': {'$ne': None}})
@@ -59,7 +59,7 @@ class ScoreAndLevel:
                         kills = match['kills']
                         assists = match['assists']
                         damage = match['hero_damage']
-                        match_experience += (10 + kills + assists + int(damage / 1000))
+                        match_experience += (100 + kills * 2 + assists * 2 + int(damage / 500))
                     self.mongo.update_many(DEFINE_MONGO_MATCH_DOTA2_HISTORY, cond, {'has_scored': 1})
                     total_experience += match_experience
 

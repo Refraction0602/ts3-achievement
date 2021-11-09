@@ -194,20 +194,21 @@ class TelnetClient:
             server_id = self.__get_server_id()
             self.__execute_command('use %s' % server_id)
             for data in ready_to_set:
-                name = 'lv%s' % data['level']
                 account_id_32bit = data['account_id_32bit']
                 account_id_64bit = data['account_id_64bit']
-                sgid = self.mongo.read(DEFINE_MONGO_SERVER_GROUP, {'name': name})[0]['sgid']
                 cldbid = self.mongo.read(DEFINE_MONGO_CLIENT_INFO, {'account_id_64bit': account_id_64bit})[0]['cldbid']
-                if data['level'] > 1:
-                    old_name = 'lv%s' % (data['level'] - 1)
-                    old_sgid = self.mongo.read(DEFINE_MONGO_SERVER_GROUP, {'name': old_name})[0]['sgid']
-                    command = 'servergroupdelclient sgid=%s cldbid=%s' % (old_sgid, cldbid)
+                if data['level'] != -1:
+                    name = 'lv%s' % data['level']
+                    sgid = self.mongo.read(DEFINE_MONGO_SERVER_GROUP, {'name': name})[0]['sgid']
+                    if data['level'] > 1:
+                        old_name = 'lv%s' % (data['level'] - 1)
+                        old_sgid = self.mongo.read(DEFINE_MONGO_SERVER_GROUP, {'name': old_name})[0]['sgid']
+                        command = 'servergroupdelclient sgid=%s cldbid=%s' % (old_sgid, cldbid)
+                        logger.info("%s" % command)
+                        self.__execute_command(command)
+                    command = 'servergroupaddclient sgid=%s cldbid=%s' % (sgid, cldbid)
                     logger.info("%s" % command)
                     self.__execute_command(command)
-                command = 'servergroupaddclient sgid=%s cldbid=%s' % (sgid, cldbid)
-                logger.info("%s" % command)
-                self.__execute_command(command)
                 now_experience, to_the_next_level = data['now_experience'], data['to_the_next_level']
                 new_description = '(steam32:%s;steam64:%s)经验：%s/%s' % (account_id_32bit, account_id_64bit, now_experience, to_the_next_level)
                 logger.info("%s %s" % (cldbid, new_description))

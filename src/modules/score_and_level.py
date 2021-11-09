@@ -65,13 +65,15 @@ class ScoreAndLevel:
 
                     new_level, now_experience, to_the_next_level = self.__level_up(total_experience)
                     update = {'total_experience': total_experience}
-                    if new_level != level:
+                    if match_experience != 0:
                         update['level'] = new_level
                         single = {'account_id_32bit': account_id_32bit,
                                   'account_id_64bit': account_id_64bit,
                                   'level': new_level,
                                   'now_experience': now_experience,
                                   'to_the_next_level': to_the_next_level}
+                        if new_level == level:
+                            single['level'] = -1
                         ready_to_set.append(single)
                     self.mongo.write(DEFINE_MONGO_CLIENT_INFO, {'account_id_64bit': account_id_64bit}, {}, update)
             if ready_to_set:
